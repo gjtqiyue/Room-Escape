@@ -20,13 +20,8 @@ void UOpenDoor::BeginPlay()
 	Super::BeginPlay();
 
 	CloseDoor();
-	
+	//OpenDoor();
 }
-
-
-
-
-
 
 // Called every frame
 void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -38,7 +33,7 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	if (triggerPlate->IsOverlappingActor(actorThatOpens)) {
 		// open the door
 		OpenDoor();
-		//UE_LOG(LogTemp, Warning, TEXT("open"));
+		UE_LOG(LogTemp, Warning, TEXT("open"));
 	}
 	else {
 
