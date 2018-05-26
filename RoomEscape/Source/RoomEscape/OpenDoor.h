@@ -36,7 +36,13 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	ATriggerVolume* triggerPlate;
-	
+
 	UPROPERTY(EditAnywhere)
-	AActor* actorThatOpens; // the player can open the door
+	float DoorCloseDelay = 1.f;
+
+	float LastDoorOpenTime;
+	
+	AActor* ActorThatOpens; // the player can open the door
+
+	AActor* owner;
 };
