@@ -1,9 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "OpenDoor.h"
+#include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
 
+#define OUT
 
 // Sets default values for this component's properties
 UOpenDoor::UOpenDoor()
@@ -11,8 +13,6 @@ UOpenDoor::UOpenDoor()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -20,11 +20,11 @@ UOpenDoor::UOpenDoor()
 void UOpenDoor::BeginPlay()
 {
 	Super::BeginPlay();
-
-	ActorThatOpens = GetWorld()->GetFirstPlayerController()->GetPawn();
-
 	owner = GetOwner();
-
+	
+	if (!triggerPlate) {
+		UE_LOG(LogTemp, Error, TEXT("%s missing pressure plate trigger"), *(GetOwner()->GetName()));
+	}
 }
 
 // Called every frame
@@ -34,31 +34,33 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 
 	// ...
 	// if the player is in the volume
-	if (triggerPlate->IsOverlappingActor(ActorThatOpens)) {
+	if (GetTotalMassOfActorsOnPlate() > MinMass) {
 		// open the door
-		OpenDoor();
+		OnOpenRequest.Broadcast();
 		//UE_LOG(LogTemp, Warning, TEXT("open"));
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+	}
+	else {
+		// close the door
+		OnCloseRequest.Broadcast();
 	}
 
-	if (GetWorld()->GetTimeSeconds() > (LastDoorOpenTime + DoorCloseDelay)) {
-		CloseDoor();
+
+}
+
+float UOpenDoor::GetTotalMassOfActorsOnPlate() {
+	float TotalMass = 0.f;
+
+	// Find all the overlapping actors
+	TArray<AActor*> OverlappingActors;
+	if (!triggerPlate) { return TotalMass; }
+	triggerPlate->GetOverlappingActors(OUT OverlappingActors);
+
+	// Calculate the total mass
+	for (auto& Actor : OverlappingActors) {
+		UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Actor->GetRootComponent());
+		TotalMass += PrimitiveComponent->GetMass();
+		UE_LOG(LogTemp, Warning, TEXT("Total mass is %f"), TotalMass);
 	}
-}
-	
 
-void UOpenDoor::OpenDoor()
-{
-	// create a rotator
-	FRotator newRotation = FRotator(0.f, openAngle, 0.f);
-	
-	// set the rotation
-	owner->SetActorRotation(newRotation);
-}
-
-void UOpenDoor::CloseDoor()
-{
-	FRotator newRotation = FRotator(0.0f, 0.0f, 0.0f);
-
-	owner->SetActorRotation(newRotation);
+	return TotalMass;
 }

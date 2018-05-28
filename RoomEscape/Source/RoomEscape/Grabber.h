@@ -28,6 +28,8 @@ public:
 
 	
 
+	
+
 private:
 	// How far ahead of the player can reach
 	float Reach = 100;
@@ -49,4 +51,8 @@ private:
 
 	// Return the hit result
 	const FHitResult GetFirstPhysicsBodyInReach();
+
+	FVector GetReachedLineEnd();
+
+	FVector GetReachedLineStart();
 };

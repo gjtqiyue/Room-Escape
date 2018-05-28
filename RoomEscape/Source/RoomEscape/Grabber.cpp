@@ -29,10 +29,7 @@ void UGrabber::FindPhysicsHandleComponent() {
 	/// Look for attached Physics Handle
 	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
 
-	if (PhysicsHandle) {
-
-	}
-	else {
+	if (PhysicsHandle == nullptr) {
 		UE_LOG(LogTemp, Error, TEXT("%s missing physics handle component"), *(GetOwner()->GetName()));
 	}
 }
@@ -42,7 +39,6 @@ void UGrabber::SetUpInputComponent() {
 	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
 
 	if (InputComponent) {
-		/// Bind the input axis
 		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
 		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
 	}
@@ -53,15 +49,6 @@ void UGrabber::SetUpInputComponent() {
 
 const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 {
-	// Get payer view point this thick
-	FVector PlayerViewPointLocation;
-	FRotator PlayerViewPointRotation;
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		OUT PlayerViewPointLocation,
-		OUT PlayerViewPointRotation
-	);
-
-	FVector LineTracedEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
 
 	/// draw a red trace in the world to viualise
 	//DrawDebugLine(
@@ -79,23 +66,16 @@ const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 	FCollisionQueryParams TraceParams(FName(TEXT("")), false, GetOwner());
 
 	/// Ray-cast out to reach distance
-	FHitResult Hit;
+	FHitResult HitResult;
 	GetWorld()->LineTraceSingleByObjectType(
-		OUT Hit, // hit result
-		PlayerViewPointLocation,
-		LineTracedEnd,
+		OUT HitResult, // hit result
+		GetReachedLineStart(),
+		GetReachedLineEnd(),
 		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
 		TraceParams
 	);
 
-	/// See what it hits
-	AActor* ActorHit = Hit.GetActor();
-	if (ActorHit)
-	{
-		//UE_LOG(LogTemp, Warning, TEXT("Hit result is %s"), *(ActorHit->GetName()));
-	}
-
-	return Hit;
+	return HitResult;
 }
 
 void UGrabber::Grab() {
@@ -108,6 +88,7 @@ void UGrabber::Grab() {
 
 	// If we hit something then attach a physics handle
 	if (HitActor) {
+		if (!PhysicsHandle) { return; }
 		PhysicsHandle->GrabComponent(
 			ComponentToGrab,
 			NAME_None,
@@ -130,6 +111,32 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	FVector LineTracedEnd = GetReachedLineEnd();
+
+	// If the handle is attached
+	if (!PhysicsHandle) { return; }
+	if (PhysicsHandle->GrabbedComponent) {
+		// Move the object we are holding
+		PhysicsHandle->SetTargetLocation(LineTracedEnd);
+	}
+	
+}
+
+FVector UGrabber::GetReachedLineStart() {
+	// Get payer view point this thick
+	FVector PlayerViewPointLocation;
+	FRotator PlayerViewPointRotation;
+	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+		OUT PlayerViewPointLocation,
+		OUT PlayerViewPointRotation
+	);
+
+	FVector LineTracedEnd = PlayerViewPointLocation;
+
+	return LineTracedEnd;
+}
+
+FVector UGrabber::GetReachedLineEnd() {
 	// Get payer view point this thick
 	FVector PlayerViewPointLocation;
 	FRotator PlayerViewPointRotation;
@@ -140,11 +147,6 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 
 	FVector LineTracedEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
 
-	// If the handle is attached
-	if (PhysicsHandle->GrabbedComponent) {
-		// Move the object we are holding
-		PhysicsHandle->SetTargetLocation(LineTracedEnd);
-	}
-	
+	return LineTracedEnd;
 }
 
